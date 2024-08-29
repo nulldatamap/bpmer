@@ -6,6 +6,7 @@ class Program
     public static void Main() => new Program().Run();
 
     public Random R = new Random();
+    public double LastBpm = 20;
     public double Bpm = 20;
     public Sound X;
 
@@ -29,6 +30,7 @@ class Program
 
     public void RandomBpm()
     {
+        LastBpm = Bpm;
         if (Continuous)
         {
             var min = Bpm <= MinBpm ? 0 : -1;
@@ -229,11 +231,35 @@ class Program
                         Raylib.ClearBackground(Color.Blue);
 
                         int key;
+                        bool hasGuessed = false;
+                        double guess = 0.0;
                         do
                         {
+                            if (Continuous)
+                            {
+                                guess = LastBpm;
+                                if (Raylib.IsKeyPressed(KeyboardKey.Up))
+                                {
+                                    guess += BpmStep;
+                                    hasGuessed = true;
+                                } else if (Raylib.IsKeyPressed(KeyboardKey.Down))
+                                {
+                                    guess -= BpmStep;
+                                    hasGuessed = true;
+                                } else if (Raylib.IsKeyPressed(KeyboardKey.Space))
+                                {
+                                   hasGuessed = true;
+                                }
+                            }
+
                             if (Raylib.IsKeyPressed(KeyboardKey.Enter) && sb.Length > 0)
                             {
-                                var guess = int.Parse(sb.ToString());
+                                guess = int.Parse(sb.ToString());
+                                hasGuessed = true;
+                            }
+
+                            if (hasGuessed)
+                            {
                                 var score = (int)(Math.Abs(Bpm - guess));
                                 state = score == 0 ? State.Correct : State.Incorrect;
 
