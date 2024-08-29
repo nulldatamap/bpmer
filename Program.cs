@@ -198,6 +198,10 @@ class Program
                                 if (MinBpm < BpmStep) MinBpm = BpmStep;
                             } else if (settingsIndex == (int)Settings.Continuous)
                             {
+                                if (!Continuous)
+                                {
+                                    RandomBpm();
+                                }
                                 Continuous = !Continuous;
                             } else if (settingsIndex == (int)Settings.Scramble)
                             {
