@@ -9,6 +9,8 @@ class Program
     public double Bpm = 20;
     public Sound X;
 
+    public bool Continuous = false;
+    public bool Scramble = false;
     public double MinBpm = 20;
     public double MaxBpm = 280;
     public double BpmStep = 20;
@@ -27,9 +29,19 @@ class Program
 
     public void RandomBpm()
     {
-        var steps = (int)((MaxBpm - MinBpm) / BpmStep);
-        var step = R.Next(steps + 1);
-        Bpm = MinBpm + (step * BpmStep);
+        if (Continuous)
+        {
+            var min = Bpm <= MinBpm ? 0 : -1;
+            var max = Bpm >= MaxBpm ? 0 : 1;
+            var step = R.Next(min, max + 1) * BpmStep;
+            Bpm += step;
+        }
+        else
+        {
+            var steps = (int)((MaxBpm - MinBpm) / BpmStep);
+            var step = R.Next(steps + 1);
+            Bpm = MinBpm + (step * BpmStep);
+        }
     }
 
     enum State
@@ -37,6 +49,7 @@ class Program
         Guess,
         Correct,
         Incorrect,
+        Scramble,
         Settings,
     }
 
@@ -51,6 +64,20 @@ class Program
         var internalVoff = index * (font_size + line_spacing);
         var globalVoff = (total * font_size + (total - 1) * line_spacing) / 2;
         Raylib.DrawText(m, (w / 2) - (width / 2), (h / 2) - globalVoff + internalVoff, font_size, Color.White);
+    }
+
+    enum Settings
+    {
+        First,
+
+        Step = First,
+        Max,
+        Min,
+        Continuous,
+        Scramble,
+        Go,
+
+        Count
     }
 
     public void Run()
@@ -91,29 +118,39 @@ class Program
                 {
                     case State.Settings:
                         Raylib.ClearBackground(Color.Purple);
-                        var options = new[] { "STEP: ", "MAX: ", "MIN: ", "[GO]" };
-                        var values = new[] { BpmStep, MaxBpm, MinBpm };
+                        var options = new[] { "STEP: ", "MAX: ", "MIN: ", "CONT: ", "SCRAMBLE: ", "[GO]" };
+                        var values = new object[] { BpmStep, MaxBpm, MinBpm, Continuous, Scramble };
 
-                        for (int i = 0; i < 4; i++)
+                        for (Settings i = Settings.First; i < Settings.Count; i++)
                         {
                             sb.Clear();
 
-                            if (i == 3 && settingsIndex == 3) sb.Append('<');
-                            sb.Append(options[i]);
-                            if (i == 3 && settingsIndex == 3) sb.Append('>');
-                            if (i < 3)
+                            switch (i)
                             {
-                                if (i == settingsIndex) sb.Append('<');
-                                sb.Append(values[i]);
-                                if (i == settingsIndex) sb.Append('>');
+                                case Settings.Step:
+                                case Settings.Max:
+                                case Settings.Min:
+                                case Settings.Continuous:
+                                case Settings.Scramble:
+                                    sb.Append(options[(int)i]);
+                                    if ((int)i == settingsIndex) sb.Append('<');
+                                    var val = values[(int)i];
+                                    sb.Append(val is bool on ? (on ? "ON" : "OFF") : val.ToString());
+                                    if ((int)i == settingsIndex) sb.Append('>');
+                                    break;
+                                case Settings.Go:
+                                    if ((int)i == settingsIndex) sb.Append('<');
+                                    sb.Append(options[(int)i]);
+                                    if ((int)i == settingsIndex) sb.Append('>');
+                                    break;
                             }
 
-                            Centered(sb.ToString(), i, 4, NORMAL_FONT_SIZE, NORMAL_LINE_SPACING);
+                            Centered(sb.ToString(), (int)i, (int)Settings.Count, NORMAL_FONT_SIZE, NORMAL_LINE_SPACING);
                         }
 
                         int diff = 0;
 
-                        if (Raylib.IsKeyPressed(KeyboardKey.Tab) || (settingsIndex == 3 &&
+                        if (Raylib.IsKeyPressed(KeyboardKey.Tab) || (settingsIndex == (int)Settings.Go &&
                                                                      (Raylib.IsKeyPressed(KeyboardKey.Enter) ||
                                                                       Raylib.IsKeyPressed(KeyboardKey.Space))))
                         {
@@ -123,13 +160,13 @@ class Program
                         }
                         else if (Raylib.IsKeyPressed(KeyboardKey.Up))
                         {
-                            settingsIndex = (4 + settingsIndex - 1) % 4;
+                            settingsIndex = ((int)Settings.Count + settingsIndex - 1) % (int)Settings.Count;
                         }
                         else if (Raylib.IsKeyPressed(KeyboardKey.Down))
                         {
-                            settingsIndex = (settingsIndex + 1) % 4;
+                            settingsIndex = (settingsIndex + 1) % (int)Settings.Count;;
                         }
-                        else if (settingsIndex != 3)
+                        else if (settingsIndex != (int)Settings.Go)
                         {
                             if (Raylib.IsKeyPressed(KeyboardKey.Left))
                             {
@@ -143,22 +180,28 @@ class Program
 
                         if (diff != 0)
                         {
-                            if (settingsIndex == 0)
+                            if (settingsIndex == (int)Settings.Step)
                             {
                                 BpmStep += diff;
                                 if (BpmStep < 1) BpmStep = 1;
                             }
-                            else if (settingsIndex == 1)
+                            else if (settingsIndex == (int)Settings.Max)
                             {
                                 MaxBpm += BpmStep * diff;
                                 if (MaxBpm < MinBpm) MaxBpm = MinBpm;
                                 if (MaxBpm < BpmStep) MaxBpm = BpmStep;
                             }
-                            else if (settingsIndex == 2)
+                            else if (settingsIndex == (int)Settings.Min)
                             {
                                 MinBpm += BpmStep * diff;
                                 if (MinBpm > MaxBpm) MinBpm = MaxBpm;
                                 if (MinBpm < BpmStep) MinBpm = BpmStep;
+                            } else if (settingsIndex == (int)Settings.Continuous)
+                            {
+                                Continuous = !Continuous;
+                            } else if (settingsIndex == (int)Settings.Scramble)
+                            {
+                                Scramble = !Scramble;
                             }
                         }
 
@@ -206,6 +249,25 @@ class Program
 
                         Centered(sb.ToString());
                         break;
+                    case State.Scramble:
+                        Raylib.ClearBackground(Color.Orange);
+                        if (R.NextSingle() < 0.2f)
+                        {
+                            Raylib.PlaySound(X);
+                            var v = R.NextSingle();
+                            sb.Clear();
+                            sb.Append((char)R.Next(' ', '~'));
+                        }
+
+                        Centered(sb.ToString());
+
+                        if (Raylib.GetTime() - lastClick >= 1.0)
+                        {
+                            sb.Clear();
+                            state = State.Guess;
+                        }
+
+                        break;
                     default:
                         var correct = state == State.Correct;
                         Raylib.ClearBackground(correct ? Color.Green : Color.Red);
@@ -216,7 +278,15 @@ class Program
                         if (Raylib.IsKeyPressed(KeyboardKey.Enter) || Raylib.IsKeyPressed(KeyboardKey.Space))
                         {
                             RandomBpm();
-                            state = State.Guess;
+                            if (Scramble)
+                            {
+                                lastClick = Raylib.GetTime();
+                                state = State.Scramble;
+                            }
+                            else
+                            {
+                                state = State.Guess;
+                            }
                         }
 
                         break;
