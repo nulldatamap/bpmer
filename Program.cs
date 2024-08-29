@@ -11,8 +11,8 @@ class Program
 
     public bool Continuous = false;
     public bool Scramble = false;
-    public double MinBpm = 20;
-    public double MaxBpm = 280;
+    public double MinBpm = 80;
+    public double MaxBpm = 200;
     public double BpmStep = 20;
 
     private const int BIG_FONT_SIZE = 128;
