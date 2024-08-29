@@ -57,7 +57,14 @@ class Program
     {
         var w = Raylib.GetRenderWidth();
         var h = Raylib.GetRenderHeight();
-        var ratio = w / Width;
+        int ratio;
+        if (h < w)
+        {
+            ratio = h / Height;
+        } else
+        {
+            ratio = w / Width;
+        }
         font_size *= ratio;
         line_spacing *= ratio;
         var width = Raylib.MeasureText(m, font_size);
